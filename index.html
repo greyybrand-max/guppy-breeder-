@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guppy Breeder</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101d2b;color:#eef7ff;font-family:Arial,sans-serif;padding:16px}
+h1{text-align:center;color:#7de4ff;margin-bottom:4px}
+.sub{text-align:center;color:#a9bdcc;font-size:13px}
+.stats{display:flex;gap:8px;margin:16px 0}
+.stat{flex:1;background:#20364a;padding:12px;border-radius:12px;text-align:center}
+.stat b{display:block;font-size:20px;color:#8df0ce}
+.tank{height:220px;border:5px solid #86d9eb;border-radius:16px;background:linear-gradient(#1c7b9a,#06374e);position:relative;overflow:hidden}
+.tank:after{content:"";position:absolute;bottom:0;width:100%;height:30px;background:#c4ad79;opacity:.75}
+.fish{position:absolute;font-size:34px;filter:drop-shadow(0 2px 2px #123);animation:swim 4s ease-in-out infinite alternate}
+@keyframes swim{from{transform:translateX(-8px)}to{transform:translateX(12px)}}
+.panel{background:#20364a;border-radius:14px;padding:14px;margin-top:14px}
+button{background:#48c6bd;color:#082a32;border:0;border-radius:9px;padding:12px 9px;font-weight:bold;font-size:14px;cursor:pointer}
+button:disabled{opacity:.4}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+select{width:100%;padding:12px;border-radius:8px;margin:6px 0;background:#12283a;color:white;border:1px solid #55758b}
+.fishrow{padding:10px;background:#152b3e;border-radius:10px;margin:8px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fishrow .info{flex:1;min-width:120px}
+small{color:#b8cbd9}
+</style>
+</head>
+<body>
+<h1>🐠 Guppy Breeder</h1>
+<div class="sub">Bangun peternakan guppy impianmu</div>
+<div class="stats">
+ <div class="stat">Koin<b id="coins">500</b></div>
+ <div class="stat">Ikan<b id="count">2</b></div>
+ <div class="stat">Burayak<b id="fry">0</b></div>
+</div>
+<div class="tank" id="tank"></div>
+<div class="panel">
+ <h3>🧬 Pemijahan</h3>
+ <small>Pilih guppy jantan dan betina untuk menghasilkan burayak.</small>
+ <label>Jantan</label><select id="male"></select>
+ <label>Betina</label><select id="female"></select>
+ <button style="width:100%" onclick="breed()">Kawinkan Guppy — 25 koin</button>
+ <p id="message">Selamat datang, breeder!</p>
+</div>
+<div class="panel">
+ <h3>🐟 Koleksi Ikan</h3>
+ <div id="collection"></div>
+</div>
+<div class="panel">
+ <h3>🏪 Toko & Perawatan</h3>
+ <div class="actions">
+  <button onclick="buy()">Beli Guppy — 100 koin</button>
+  <button onclick="feed()">Beli Pakan — 20 koin</button>
+  <button onclick="grow()">Besarkan Burayak</button>
+  <button onclick="sellFry()">Jual Burayak</button>
+ </div>
+ <p id="food">Stok pakan: 3</p>
+</div>
+<script>
+const colors=["Merah","Biru","Kuning","Hijau","Ungu","Mosaic"];
+let game=JSON.parse(localStorage.getItem("guppySave")||"null")||{
+ coins:500,food:3,next:3,fish:[
+ {id:1,name:"Guppy Merah",sex:"Jantan",color:"Merah",age:60},
+ {id:2,name:"Guppy Biru",sex:"Betina",color:"Biru",age:60}
+ ],fry:0};
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("guppySave",JSON.stringify(game));render()}
+function say(s){$("message").textContent=s}
+function render(){
+ $("coins").textContent=game.coins;
+ $("count").textContent=game.fish.length;
+ $("fry").textContent=game.fry;
+ $("food").textContent="Stok pakan: "+game.food;
+ $("tank").innerHTML=game.fish.slice(0,8).map((f,i)=>
+ `<span class="fish" style="top:${20+(i*37)%145}px;left:${5+(i*23)%75}%;animation-delay:${i*.3}s">${f.sex==="Jantan"?"🐠":"🐟"}</span>`).join("");
+ let males=game.fish.filter(f=>f.sex==="Jantan");
+ let females=game.fish.filter(f=>f.sex==="Betina");
+ $("male").innerHTML=males.map(f=>`<option value="${f.id}">${f.name} (${f.age} hari)</option>`).join("");
+ $("female").innerHTML=females.map(f=>`<option value="${f.id}">${f.name} (${f.age} hari)</option>`).join("");
+ $("collection").innerHTML=game.fish.map(f=>`<div class="fishrow"><span style="font-size:28px">🐠</span><div class="info"><b>${f.name}</b><br><small>${f.sex} • Umur ${f.age} hari</small></div><button onclick="sell(${f.id})">Jual ${f.age>=30?50:20}</button></div>`).join("")||"Belum ada ikan.";
+}
+function breed(){
+ let m=game.fish.find(f=>f.id==$("male").value);
+ let f=game.fish.find(f=>f.id==$("female").value);
+ if(!m||!f)return say("Kamu perlu satu jantan dan satu betina.");
+ if(m.id===f.id)return say("Pilih dua ikan yang berbeda.");
+ if(m.age<30||f.age<30)return say("Ikan harus berumur minimal 30 hari.");
+ if(game.coins<25)return say("Koin tidak cukup.");
+ game.coins-=25;
+ game.fry+=Math.floor(Math.random()*5)+3;
+ say("Berhasil! Burayak baru lahir. Rawat sampai siap dijual.");
+ save();
+}
+function buy(){
+ if(game.coins<100)return say("Koin tidak cukup.");
+ if(game.fish.length>=30)return say("Akuarium penuh! Jual ikan dulu.");
+ game.coins-=100;
+ let c=colors[Math.floor(Math.random()*colors.length)];
+ let sex=Math.random()<.5?"Jantan":"Betina";
+ game.fish.push({id:game.next++,name:"Guppy "+c,sex,color:c,age:1});
+ say("Kamu mendapatkan guppy "+c+" "+sex+".");
+ save();
+}
+function feed(){
+ if(game.coins<20)return say("Koin tidak cukup.");
+ game.coins-=20;game.food++;
+ say("Pakan berhasil dibeli.");save();
+}
+function grow(){
+ if(game.fry<1)return say("Belum ada burayak.");
+ if(game.food<1)return say("Pakan habis! Beli pakan dulu.");
+ if(game.fish.length>=30)return say("Akuarium penuh! Jual ikan dulu.");
+ game.food--;game.fry--;
+ let c=colors[Math.floor(Math.random()*colors.length)];
+ let sex=Math.random()<.5?"Jantan":"Betina";
+ game.fish.push({id:game.next++,name:"Guppy "+c,sex,color:c,age:30});
+ say("Satu burayak tumbuh menjadi guppy muda!");
+ save();
+}
+function sellFry(){
+ if(game.fry<1)return say("Tidak ada burayak untuk dijual.");
+ let n=game.fry;game.coins+=n*5;game.fry=0;
+ say(n+" burayak terjual seharga "+n*5+" koin.");
+ save();
+}
+function sell(id){
+ if(game.fish.length<=1)return say("Sisakan setidaknya satu ikan.");
+ let f=game.fish.find(x=>x.id===id);
+ game.coins+=f.age>=30?50:20;
+ game.fish=game.fish.filter(x=>x.id!==id);
+ say(f.name+" berhasil dijual.");save();
+}
+render();
+</script>
+</body>
+</html>
